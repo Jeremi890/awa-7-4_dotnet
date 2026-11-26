@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using TaskFlowApi.Models;
+using TaskFlowApi.Services;
 
 namespace TaskFlowApi.Controllers
 {
@@ -7,22 +8,24 @@ namespace TaskFlowApi.Controllers
     [Route("api/[controller]")]
     public class LibrosController : ControllerBase
     {
-        private static List<Libro> libros = new List<Libro>
+        private readonly LibroService _libroService;
+        //Guarda una referencia al servicio
+
+        public LibrosController(LibroService libroService)
         {
-            new Libro{ Id = 1, Titulo = "Clean Code", Autor = "Robert Martin", Disponible = true},
-            new Libro{ Id = 2, Titulo = "The pragmatic Programmer", Autor = "Andrew Hunt", Disponible = false},
-        };
+            _libroService = libroService;
+        }
 
         [HttpGet]
         public IActionResult Get()
         {
-            return Ok(libros);
+            return Ok(_libroService.ObtenerTodos());
         }
 
         [HttpGet("{id}")]
         public IActionResult GetById(int id)
         {
-            var libro = libros.FirstOrDefault(l => l.Id == id);
+            var libro = _libroService.ObtenerPorId(id);
 
             if (libro == null)
             {
@@ -35,39 +38,33 @@ namespace TaskFlowApi.Controllers
         [HttpPost]
         public IActionResult Post([FromBody] Libro nuevoLibro)
         {
-            nuevoLibro.Id = libros.Count + 1;
-            libros.Add(nuevoLibro);
+            var libroCreado = _libroService.Agregar(nuevoLibro);
 
-            return Created("", nuevoLibro);
+            return Created("", libroCreado);
         }
 
         [HttpPut("{id}")]
         public IActionResult Put(int id, [FromBody] Libro libroActualizado)
         {
-            var libro = libros.FirstOrDefault(l => l.Id == id);
+            var libro = _libroService.Actualizar(id, libroActualizado);
 
             if (libro == null)
             {
                 return NotFound();
             }
-            libro.Titulo = libroActualizado.Titulo;
-            libro.Autor = libroActualizado.Autor;
-            libro.Disponible = libroActualizado.Disponible;
 
             return Ok(libro);
-
         }
 
         [HttpDelete("{id}")]
         public IActionResult Delete(int id)
         {
-            var libro = libros.FirstOrDefault(l => l.Id == id);
-            if (libro == null)
+            var eliminado = _libroService.Eliminar(id);
+
+            if (!eliminado)
             {
                 return NotFound();
             }
-
-            libros.Remove(libro);
 
             return Ok(new { mensaje = "Libro eliminado correctamente" });
         }
